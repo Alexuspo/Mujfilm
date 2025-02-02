@@ -1,23 +1,22 @@
 package alexus.studio.mujfilm.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import alexus.studio.mujfilm.api.TMDbService
-import alexus.studio.mujfilm.data.Movie
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import alexus.studio.mujfilm.data.model.Movie
 
 @Composable
 fun MovieCard(
@@ -25,60 +24,58 @@ fun MovieCard(
     onFavoriteClick: (Movie) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val uriHandler = LocalUriHandler.current
+    
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            .padding(8.dp)
+            .clickable { uriHandler.openUri(movie.csfdUrl) }
     ) {
-        Row(modifier = Modifier.height(150.dp)) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data("${TMDbService.IMAGE_BASE_URL}${movie.poster_path}")
-                    .crossfade(true)
-                    .build(),
-                contentDescription = movie.title,
-                modifier = Modifier.width(100.dp),
-                contentScale = ContentScale.Crop
-            )
-            Column(
-                modifier = Modifier
-                    .padding(8.dp)
-                    .fillMaxWidth()
+        Column {
+            Box(
+                contentAlignment = Alignment.TopEnd
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                AsyncImage(
+                    model = movie.posterUrl,
+                    contentDescription = movie.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                )
+                
+                IconButton(
+                    onClick = { onFavoriteClick(movie) }
                 ) {
-                    Text(
-                        text = movie.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.weight(1f)
+                    Icon(
+                        imageVector = if (movie.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = if (movie.isFavorite) "Odebrat z oblíbených" else "Přidat do oblíbených",
+                        tint = MaterialTheme.colorScheme.primary
                     )
-                    IconButton(
-                        onClick = { 
-                            onFavoriteClick(movie)
-                        },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (movie.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                            contentDescription = if (movie.isFavorite) "Odebrat z oblíbených" else "Přidat do oblíbených",
-                            tint = if (movie.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
                 }
+            }
+            
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
                 Text(
-                    text = movie.overview ?: "",  // Add null safety
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 3,
+                    text = "${movie.title} (${movie.year})",
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Hodnocení: ${movie.vote_average}/10",
-                    style = MaterialTheme.typography.bodySmall
+                    text = movie.director,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = movie.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
         }
@@ -86,7 +83,7 @@ fun MovieCard(
 }
 
 @Composable
-fun LazyMovieList(
+fun MovieList(
     movies: List<Movie>,
     onFavoriteClick: (Movie) -> Unit,
     modifier: Modifier = Modifier
@@ -97,11 +94,11 @@ fun LazyMovieList(
     ) {
         items(
             items = movies,
-            key = { it.id }  // Přidání klíče pro lepší výkon
+            key = { it.id }
         ) { movie ->
             MovieCard(
                 movie = movie,
-                onFavoriteClick = onFavoriteClick
+                onFavoriteClick = { onFavoriteClick(movie) }
             )
         }
     }

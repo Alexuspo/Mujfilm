@@ -1,80 +1,46 @@
 package alexus.studio.mujfilm.viewmodel
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import alexus.studio.mujfilm.data.Movie
-import alexus.studio.mujfilm.db.MovieDatabase
-import alexus.studio.mujfilm.repository.MovieRepository
-import kotlinx.coroutines.flow.*
+import alexus.studio.mujfilm.data.MovieRepository
+import alexus.studio.mujfilm.data.model.Movie
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 class MovieViewModel(application: Application) : AndroidViewModel(application) {
-    private val database = MovieDatabase.getDatabase(application)
-    private val movieDao = database.movieDao()
-    private val repository = MovieRepository()
+    private val repository = MovieRepository(application)
     
-    private val _movies = MutableStateFlow<List<Movie>>(emptyList())
-    val movies: StateFlow<List<Movie>> = _movies
+    private val _uiState = MutableStateFlow<MoviesUiState>(MoviesUiState.Loading)
+    val uiState = _uiState.asStateFlow()
 
     private val _favoriteMovies = MutableStateFlow<List<Movie>>(emptyList())
-    val favoriteMovies: StateFlow<List<Movie>> = _favoriteMovies
+    val favoriteMovies = _favoriteMovies.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
-
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
+    val isLoading = _isLoading.asStateFlow()
 
     init {
-        viewModelScope.launch(Dispatchers.IO) {
-            loadPopularMovies()
-            // Sledujeme oblíbené filmy
-            try {
-                movieDao.getFavoriteMovies().collect { favorites ->
-                    _favoriteMovies.value = favorites
-                    // Aktualizujeme stav oblíbených v hlavním seznamu
-                    updateMainListFavorites(favorites)
-                }
-            } catch (e: Exception) {
-                Log.e("MovieViewModel", "Error collecting favorites", e)
-            }
-        }
+        loadMovies()
     }
 
-    private fun updateMainListFavorites(favorites: List<Movie>) {
-        val favoriteIds = favorites.map { it.id }.toSet()
-        val currentMovies = _movies.value.map { movie ->
-            movie.copy(isFavorite = favoriteIds.contains(movie.id))
-        }
-        _movies.value = currentMovies
-    }
-
-    fun loadPopularMovies() {
+    fun loadMovies() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                _movies.value = repository.getPopularMovies()
-                updateMoviesList()
-            } catch (e: Exception) {
-                Log.e("MovieViewModel", "Error loading popular movies", e)
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun searchMovies(query: String) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                _movies.value = repository.searchMovies(query)
-                updateMoviesList()
-            } catch (e: Exception) {
-                Log.e("MovieViewModel", "Error searching movies", e)
+                repository.getPopularMovies().fold(
+                    onSuccess = { movies ->
+                        _uiState.value = if (movies.isEmpty()) {
+                            MoviesUiState.Empty
+                        } else {
+                            MoviesUiState.Success(movies)
+                        }
+                    },
+                    onFailure = { error ->
+                        _uiState.value = MoviesUiState.Error(error.message ?: "Neznámá chyba")
+                    }
+                )
             } finally {
                 _isLoading.value = false
             }
@@ -82,43 +48,19 @@ class MovieViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleFavorite(movie: Movie) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val updatedMovie = movie.copy(isFavorite = !movie.isFavorite)
-                if (updatedMovie.isFavorite) {
-                    movieDao.insertMovie(updatedMovie)
-                } else {
-                    movieDao.deleteMovie(updatedMovie)
-                }
-                
-                // Okamžitě aktualizujeme UI
-                val currentMovies = _movies.value.toMutableList()
-                val index = currentMovies.indexOfFirst { it.id == movie.id }
-                if (index != -1) {
-                    currentMovies[index] = updatedMovie
-                    _movies.value = currentMovies
-                }
-
-            } catch (e: Exception) {
-                Log.e("MovieViewModel", "Error toggling favorite", e)
-            }
+        val currentFavorites = _favoriteMovies.value.toMutableList()
+        if (currentFavorites.any { it.id == movie.id }) {
+            currentFavorites.removeAll { it.id == movie.id }
+        } else {
+            currentFavorites.add(movie)
         }
+        _favoriteMovies.value = currentFavorites
     }
+}
 
-    private suspend fun updateMoviesList() {
-        withContext(Dispatchers.IO) {
-            try {
-                val currentMovies = _movies.value
-                val updatedMovies = currentMovies.map { movie ->
-                    val isFavorite = movieDao.isMovieFavorite(movie.id)
-                    movie.copy(isFavorite = isFavorite)
-                }
-                withContext(Dispatchers.Main) {
-                    _movies.value = updatedMovies
-                }
-            } catch (e: Exception) {
-                Log.e("MovieViewModel", "Error updating movies list", e)
-            }
-        }
-    }
+sealed class MoviesUiState {
+    data object Loading : MoviesUiState()
+    data object Empty : MoviesUiState()
+    data class Success(val movies: List<Movie>) : MoviesUiState()
+    data class Error(val message: String) : MoviesUiState()
 }

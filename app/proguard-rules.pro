@@ -19,3 +19,8 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Udržujte třídy pro Retrofit a Gson
+-keep class retrofit2.** { *; }
+-keep class com.google.gson.** { *; }
+-keep class alexus.studio.mujfilm.data.**

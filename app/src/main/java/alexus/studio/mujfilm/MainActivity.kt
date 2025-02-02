@@ -4,31 +4,37 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import alexus.studio.mujfilm.ui.theme.MujFilmTheme
 import alexus.studio.mujfilm.viewmodel.MovieViewModel
-import alexus.studio.mujfilm.ui.components.MovieCard
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.text.style.TextAlign  // Add this import
 import alexus.studio.mujfilm.ui.components.ErrorScreen
+import alexus.studio.mujfilm.ui.components.MovieList
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import alexus.studio.mujfilm.viewmodel.MoviesUiState
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MujFilmTheme {
-                val viewModel: MovieViewModel = viewModel()
-                MainScreen(viewModel)
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    val viewModel: MovieViewModel = viewModel()
+                    MainScreen(viewModel)
+                }
             }
         }
     }
@@ -38,14 +44,14 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen(viewModel: MovieViewModel) {
     var selectedTab by remember { mutableStateOf(0) }
-    
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
         },
@@ -54,19 +60,19 @@ fun MainScreen(viewModel: MovieViewModel) {
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Filled.Home, "Domů") },
+                    icon = { Icon(Icons.Filled.Home, contentDescription = "Domů") },
                     label = { Text("Domů") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Filled.Search, "Hledat") },
+                    icon = { Icon(Icons.Filled.Search, contentDescription = "Hledat") },
                     label = { Text("Hledat") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Filled.Favorite, "Oblíbené") },
+                    icon = { Icon(Icons.Filled.Favorite, contentDescription = "Oblíbené") },
                     label = { Text("Oblíbené") }
                 )
             }
@@ -80,7 +86,8 @@ fun MainScreen(viewModel: MovieViewModel) {
             when (selectedTab) {
                 0 -> HomeScreen(viewModel)
                 1 -> SearchScreen(viewModel)
-                2 -> FavoritesScreen(viewModel)  // Přidáno předání viewModel
+                2 -> FavoritesScreen(viewModel)
+                else -> HomeScreen(viewModel) // Default case
             }
         }
     }
@@ -88,9 +95,7 @@ fun MainScreen(viewModel: MovieViewModel) {
 
 @Composable
 fun HomeScreen(viewModel: MovieViewModel) {
-    val movies by viewModel.movies.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
-    val error by viewModel.error.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
@@ -98,30 +103,35 @@ fun HomeScreen(viewModel: MovieViewModel) {
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(16.dp)
         )
-        
-        when {
-            isLoading -> {
+
+        when (val state = uiState) {
+            MoviesUiState.Loading -> {
                 CircularProgressIndicator(
                     modifier = Modifier
                         .fillMaxSize()
                         .wrapContentSize()
                 )
             }
-            error != null -> {
-                ErrorScreen(
-                    message = error ?: stringResource(R.string.error_loading_movies),
-                    onRetry = { viewModel.loadPopularMovies() }
+            MoviesUiState.Empty -> {
+                Text(
+                    text = "Nebyly nalezeny žádné filmy",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .wrapContentSize()
                 )
             }
-            else -> {
-                LazyColumn {
-                    items(movies) { movie ->
-                        MovieCard(
-                            movie = movie,
-                            onFavoriteClick = { viewModel.toggleFavorite(it) }
-                        )
-                    }
-                }
+            is MoviesUiState.Error -> {
+                ErrorScreen(
+                    message = state.message,
+                    onRetry = { viewModel.loadMovies() }
+                )
+            }
+            is MoviesUiState.Success -> {
+                MovieList(
+                    movies = state.movies,
+                    onFavoriteClick = { movie -> viewModel.toggleFavorite(movie) },
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }
@@ -156,14 +166,11 @@ fun SearchScreen(viewModel: MovieViewModel) {
                     .wrapContentSize()
             )
         } else {
-            LazyColumn {
-                items(movies) { movie ->
-                    MovieCard(
-                        movie = movie,
-                        onFavoriteClick = { viewModel.toggleFavorite(it) }  // Přidáno předání callbacku
-                    )
-                }
-            }
+            MovieList(
+                movies = movies.value,
+                onFavoriteClick = { movie -> viewModel.toggleFavorite(movie) },
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }
@@ -193,17 +200,11 @@ fun FavoritesScreen(viewModel: MovieViewModel) {
                 )
             }
         } else {
-            LazyColumn {
-                items(
-                    items = favoriteMovies,
-                    key = { it.id }
-                ) { movie ->
-                    MovieCard(
-                        movie = movie,
-                        onFavoriteClick = { viewModel.toggleFavorite(it) }
-                    )
-                }
-            }
+            MovieList(
+                movies = favoriteMovies,
+                onFavoriteClick = { movie -> viewModel.toggleFavorite(movie) },
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }
