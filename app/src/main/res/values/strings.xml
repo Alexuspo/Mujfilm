@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Můj Film</string>
+    <string name="search_hint">Hledat film...</string>
+    <string name="home">Domů</string>
+    <string name="search">Hledat</string>
+    <string name="favorites">Oblíbené</string>
+    <string name="popular_movies">Populární filmy</string>
+    <string name="no_results">Žádné výsledky</string>
+    <string name="error_loading_movies">Nepodařilo se načíst filmy</string>
+    <string name="error_no_internet">Zkontrolujte připojení k internetu</string>
+    <string name="error_try_again">Zkusit znovu</string>
+    <string name="error_tip">Zkontrolujte připojení k internetu a zkuste to znovu</string>
+</resources>
