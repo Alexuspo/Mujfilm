@@ -42,6 +42,26 @@ private val LightColorScheme = lightColorScheme(
     onSurface = Color.Black
 )
 
+private val LightColors = lightColorScheme(
+    primary = Color(0xFF6200EE),
+    primaryContainer = Color(0xFFBB86FC),
+    secondary = Color(0xFF03DAC6),
+    secondaryContainer = Color(0xFF018786),
+    background = Color(0xFFF5F5F5),
+    surface = Color(0xFFFFFFFF),
+    error = Color(0xFFB00020)
+)
+
+private val DarkColors = darkColorScheme(
+    primary = Color(0xFFBB86FC),
+    primaryContainer = Color(0xFF3700B3),
+    secondary = Color(0xFF03DAC6),
+    secondaryContainer = Color(0xFF003E3E),
+    background = Color(0xFF121212),
+    surface = Color(0xFF1E1E1E),
+    error = Color(0xFFCF6679)
+)
+
 @Composable
 fun MujFilmTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -54,7 +74,7 @@ fun MujFilmTheme(
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
         darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        else -> LightColors
     }
 
     val view = LocalView.current
@@ -68,7 +88,7 @@ fun MujFilmTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = AppTypography,  // Použití AppTypography místo Typography
         content = content
     )
 }

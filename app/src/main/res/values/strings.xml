@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Můj Film</string>
-    <string name="search_hint">Hledat film...</string>
+    <string name="search_hint">Zadejte název filmu...</string>
     <string name="home">Domů</string>
     <string name="search">Hledat</string>
     <string name="favorites">Oblíbené</string>
@@ -11,4 +11,8 @@
     <string name="error_no_internet">Zkontrolujte připojení k internetu</string>
     <string name="error_try_again">Zkusit znovu</string>
     <string name="error_tip">Zkontrolujte připojení k internetu a zkuste to znovu</string>
+    <string name="no_movies_found">Nebyly nalezeny žádné filmy</string>
+    <string name="no_favorites">Zatím nemáte žádné oblíbené filmy</string>
+    <string name="try_again">Zkusit znovu</string>
+    <string name="tmdb_attribution">Powered by The Movie Database (TMDB)</string>
 </resources>

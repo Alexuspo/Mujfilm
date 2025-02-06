@@ -29,24 +29,10 @@ fun ErrorScreen(
             textAlign = TextAlign.Center
         )
         
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Text(
-            text = stringResource(R.string.error_tip),
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        
         Spacer(modifier = Modifier.height(16.dp))
         
-        Button(
-            onClick = onRetry,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Text(stringResource(R.string.error_try_again))
+        Button(onClick = onRetry) {
+            Text("Zkusit znovu")
         }
     }
 }

@@ -1,13 +1,19 @@
 package alexus.studio.mujfilm.data.model
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import com.google.gson.annotations.SerializedName
+
+@Entity(tableName = "movies")
 data class Movie(
-    val id: String,
+    @PrimaryKey
+    val id: Int,
     val title: String,
-    val year: Int,
-    val director: String,
-    val description: String,
-    val posterUrl: String,
-    val rating: Int,
-    val genres: List<String> = emptyList(),
-    val isFavorite: Boolean = false
+    @SerializedName("poster_path")
+    val posterPath: String?,
+    @SerializedName("release_date")
+    val releaseDate: String?,
+    val overview: String?,
+    @SerializedName("vote_average")
+    val voteAverage: Double?
 )

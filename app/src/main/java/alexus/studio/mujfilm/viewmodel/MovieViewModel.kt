@@ -8,6 +8,7 @@ import alexus.studio.mujfilm.data.model.Movie
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import alexus.studio.mujfilm.data.MovieError
 
 class MovieViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = MovieRepository(application)
@@ -38,7 +39,43 @@ class MovieViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     },
                     onFailure = { error ->
-                        _uiState.value = MoviesUiState.Error(error.message ?: "Neznámá chyba")
+                        val message = when (error) {
+                            is MovieError.NoInternet -> "Není k dispozici připojení k internetu"
+                            is MovieError.ApiNotReachable -> "Server není dostupný"
+                            is MovieError.Timeout -> "Vypršel časový limit připojení"
+                            is MovieError.ApiError -> "Chyba serveru: ${error.code}"
+                            else -> "Neočekávaná chyba: ${error.message}"
+                        }
+                        _uiState.value = MoviesUiState.Error(message)
+                    }
+                )
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun searchMovies(query: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                repository.searchMovies(query).fold(
+                    onSuccess = { movies ->
+                        _uiState.value = if (movies.isEmpty()) {
+                            MoviesUiState.Empty
+                        } else {
+                            MoviesUiState.Success(movies)
+                        }
+                    },
+                    onFailure = { error ->
+                        val message = when (error) {
+                            is MovieError.NoInternet -> "Není k dispozici připojení k internetu"
+                            is MovieError.ApiNotReachable -> "Server není dostupný"
+                            is MovieError.Timeout -> "Vypršel časový limit připojení"
+                            is MovieError.ApiError -> "Chyba serveru: ${error.code}"
+                            else -> "Neočekávaná chyba: ${error.message}"
+                        }
+                        _uiState.value = MoviesUiState.Error(message)
                     }
                 )
             } finally {
@@ -56,11 +93,4 @@ class MovieViewModel(application: Application) : AndroidViewModel(application) {
         }
         _favoriteMovies.value = currentFavorites
     }
-}
-
-sealed class MoviesUiState {
-    data object Loading : MoviesUiState()
-    data object Empty : MoviesUiState()
-    data class Success(val movies: List<Movie>) : MoviesUiState()
-    data class Error(val message: String) : MoviesUiState()
 }

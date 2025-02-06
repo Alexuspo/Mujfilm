@@ -1,26 +1,20 @@
 package alexus.studio.mujfilm.ui.movies
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import alexus.studio.mujfilm.data.model.Movie
-import alexus.studio.mujfilm.data.remote.TmdbApi
+import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import alexus.studio.mujfilm.data.model.Movie
+import alexus.studio.mujfilm.ui.components.MovieCard
 
 @Composable
 fun MoviesGrid(
     movies: List<Movie>,
+    onMovieClick: (Movie) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyVerticalGrid(
@@ -28,53 +22,49 @@ fun MoviesGrid(
         contentPadding = PaddingValues(8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
     ) {
         items(movies) { movie ->
-            MovieCard(movie = movie)
+            MovieCard(
+                movie = movie,
+                onClick = { onMovieClick(movie) }
+            )
         }
     }
 }
 
 @Composable
-private fun MovieCard(
+fun MovieCard(
     movie: Movie,
-    modifier: Modifier = Modifier
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = modifier
+        onClick = onClick,
+        modifier = Modifier
             .fillMaxWidth()
-            .padding(4.dp)
+            .aspectRatio(0.7f)
     ) {
         Column {
-            // Poster
             AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data("${TmdbApi.IMAGE_URL}${movie.poster_path}")
-                    .crossfade(true)
-                    .build(),
+                model = movie.posterPath,
                 contentDescription = movie.title,
-                contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(2f/3f)
+                    .weight(1f),
+                contentScale = ContentScale.Crop
             )
             
-            // Info
-            Column(
+            Text(
+                text = movie.title,
+                style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(8.dp)
-            ) {
+            )
+            
+            movie.releaseDate?.let { date ->
                 Text(
-                    text = movie.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = movie.release_date.split("-")[0], // Zobrazí pouze rok
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = date,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
         }

@@ -1,4 +1,3 @@
-
 package alexus.studio.mujfilm.ui.movies
 
 import androidx.compose.foundation.layout.*
@@ -7,22 +6,33 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import alexus.studio.mujfilm.ui.components.ErrorScreen
+import alexus.studio.mujfilm.viewmodel.MovieViewModel
+import alexus.studio.mujfilm.viewmodel.MoviesUiState
+import alexus.studio.mujfilm.data.model.Movie
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun MoviesScreen(
-    modifier: Modifier = Modifier,
-    viewModel: MoviesViewModel = viewModel()
+    viewModel: MovieViewModel = viewModel(),
+    onMovieClick: (Movie) -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.homeState.collectAsStateWithLifecycle()
     
     when (val state = uiState) {
-        is MoviesUiState.Loading -> LoadingIndicator()
-        is MoviesUiState.Empty -> EmptyState()
-        is MoviesUiState.Error -> ErrorScreen(
-            message = state.message,
-            onRetry = { viewModel.loadMovies() }
-        )
-        is MoviesUiState.Success -> MoviesGrid(movies = state.movies)
+        MoviesUiState.Loading -> LoadingIndicator()
+        MoviesUiState.Empty -> EmptyState()
+        is MoviesUiState.Error -> {
+            ErrorScreen(
+                message = state.message,
+                onRetry = { viewModel.loadPopularMovies() }
+            )
+        }
+        is MoviesUiState.Success -> {
+            MoviesGrid(
+                movies = state.movies,
+                onMovieClick = onMovieClick
+            )
+        }
     }
 }
 

@@ -4,8 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -19,7 +17,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import alexus.studio.mujfilm.ui.theme.MujFilmTheme
 import alexus.studio.mujfilm.viewmodel.MovieViewModel
 import alexus.studio.mujfilm.ui.components.ErrorScreen
-import alexus.studio.mujfilm.ui.components.MovieList
+import alexus.studio.mujfilm.ui.movies.MoviesGrid
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import alexus.studio.mujfilm.viewmodel.MoviesUiState
 
@@ -27,15 +25,20 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MujFilmTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val viewModel: MovieViewModel = viewModel()
-                    MainScreen(viewModel)
-                }
-            }
+            val viewModel: MovieViewModel = viewModel()
+            App(viewModel)
+        }
+    }
+}
+
+@Composable
+fun App(viewModel: MovieViewModel) {
+    MujFilmTheme {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            MainScreen(viewModel)
         }
     }
 }
@@ -127,10 +130,9 @@ fun HomeScreen(viewModel: MovieViewModel) {
                 )
             }
             is MoviesUiState.Success -> {
-                MovieList(
+                MoviesGrid(
                     movies = state.movies,
-                    onFavoriteClick = { movie -> viewModel.toggleFavorite(movie) },
-                    modifier = Modifier.fillMaxSize()
+                    onMovieClick = { movie -> viewModel.toggleFavorite(movie) }
                 )
             }
         }
@@ -140,7 +142,7 @@ fun HomeScreen(viewModel: MovieViewModel) {
 @Composable
 fun SearchScreen(viewModel: MovieViewModel) {
     var searchQuery by remember { mutableStateOf("") }
-    val movies by viewModel.movies.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -166,11 +168,44 @@ fun SearchScreen(viewModel: MovieViewModel) {
                     .wrapContentSize()
             )
         } else {
-            MovieList(
-                movies = movies.value,
-                onFavoriteClick = { movie -> viewModel.toggleFavorite(movie) },
-                modifier = Modifier.fillMaxSize()
-            )
+            when (val state = uiState) {
+                MoviesUiState.Loading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .wrapContentSize()
+                    )
+                }
+                MoviesUiState.Empty -> {
+                    Text(
+                        text = "Nebyly nalezeny žádné filmy",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .wrapContentSize()
+                    )
+                }
+                is MoviesUiState.Error -> {
+                    ErrorScreen(
+                        message = state.message,
+                        onRetry = { viewModel.searchMovies(searchQuery) }
+                    )
+                }
+                is MoviesUiState.Success -> {
+                    MoviesGrid(
+                        movies = state.movies,
+                        onMovieClick = { movie -> viewModel.toggleFavorite(movie) },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                else -> {
+                    Text(
+                        text = "Neznámý stav",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .wrapContentSize()
+                    )
+                }
+            }
         }
     }
 }
@@ -180,31 +215,20 @@ fun FavoritesScreen(viewModel: MovieViewModel) {
     val favoriteMovies by viewModel.favoriteMovies.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center)
-            )
-        } else if (favoriteMovies.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Zatím nemáte žádné oblíbené filmy",
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center
-                )
-            }
-        } else {
-            MovieList(
-                movies = favoriteMovies,
-                onFavoriteClick = { movie -> viewModel.toggleFavorite(movie) },
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-    }
-}
+    if (isLoading) {
+        CircularProgressIndicator(
+            modifier = Modifier
+                .fillMaxSize()
+                .wrapContentSize()
+        )
+    } else if (favoriteMovies.isEmpty()) {
+        Text(
+            text = "Zatím nemáte žádné oblíbené filmy",
+            modifier = Modifier
+                .fillMaxSize()
+                .wrapContentSize()
+        )
+    } else {
+        MoviesGrid(            movies = favoriteMovies,            onMovieClick = { movie -> viewModel.toggleFavorite(movie) },            modifier = Modifier.fillMaxSize()
+        )
+    }}

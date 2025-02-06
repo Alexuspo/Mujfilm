@@ -1,17 +1,15 @@
 package alexus.studio.mujfilm.data
 
 import android.content.Context
-import android.util.Log
 import alexus.studio.mujfilm.data.model.Movie
-import alexus.studio.mujfilm.data.remote.TmdbApi
-import alexus.studio.mujfilm.util.NetworkUtil
+import alexus.studio.mujfilm.data.remote.TmdbApiService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.net.SocketTimeoutException
-import java.util.concurrent.TimeUnit
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 sealed class MovieError : Exception() {
     object NoInternet : MovieError()
@@ -22,43 +20,71 @@ sealed class MovieError : Exception() {
 }
 
 class MovieRepository(private val context: Context) {
-    private val api: TmdbApi by lazy {
-        val client = OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .build()
-
+    private val api: TmdbApiService by lazy {
         Retrofit.Builder()
-            .baseUrl(TmdbApi.BASE_URL)
-            .client(client)
+            .baseUrl(TmdbApiService.BASE_URL)
+            .client(OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    val original = chain.request()
+                    val url = original.url.newBuilder()
+                        .addQueryParameter("api_key", "4de5de226aa2c5402798e3d9f369016b")
+                        .build()
+                    chain.proceed(original.newBuilder().url(url).build())
+                }
+                .build())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(TmdbApi::class.java)
+            .create(TmdbApiService::class.java)
     }
 
-    suspend fun getPopularMovies(page: Int = 1): Result<List<Movie>> = withContext(Dispatchers.IO) {
+    suspend fun getPopularMovies(): Result<List<Movie>> = withContext(Dispatchers.IO) {
         try {
-            if (!NetworkUtil.isOnline(context)) {
-                Log.e("MovieRepository", "No internet connection")
-                return@withContext Result.failure(MovieError.NoInternet)
+            val response = api.getMovies(apiKey = "4de5de226aa2c5402798e3d9f369016b")
+            if (response.isSuccessful && response.body() != null) {
+                val movies = response.body()!!.results.map { dto ->
+                    Movie(
+                        id = dto.id,
+                        title = dto.title,
+                        posterPath = dto.poster_path?.let { "${TmdbApiService.IMAGE_BASE_URL}$it" },
+                        releaseDate = dto.release_date,
+                        overview = dto.overview,
+                        voteAverage = dto.vote_average
+                    )
+                }
+                Result.success(movies)
+            } else {
+                Result.failure(MovieError.ApiError(response.code()))
             }
-
-            if (!NetworkUtil.canReachTmdbApi()) {
-                Log.e("MovieRepository", "Cannot reach TMDB API")
-                return@withContext Result.failure(MovieError.ApiNotReachable)
-            }
-
-            val response = api.getPopularMovies(page = page)
-            Log.d("MovieRepository", "Successfully fetched ${response.results.size} movies")
-            Result.success(response.results)
-            
         } catch (e: Exception) {
-            val error = when (e) {
-                is SocketTimeoutException -> MovieError.Timeout
-                else -> MovieError.UnknownError(e)
+            Result.failure(MovieError.UnknownError(e))
+        }
+    }
+
+    suspend fun searchMovies(query: String): Result<List<Movie>> = withContext(Dispatchers.IO) {
+        try {
+            val response = api.searchMovies(
+                apiKey = "4de5de226aa2c5402798e3d9f369016b",
+                query = query
+            )
+            if (response.isSuccessful && response.body() != null) {
+                val movies = response.body()!!.results.map { dto ->
+                    Movie(
+                        id = dto.id,
+                        title = dto.title,
+                        posterPath = dto.poster_path?.let { "${TmdbApiService.IMAGE_BASE_URL}$it" },
+                        releaseDate = dto.release_date,
+                        overview = dto.overview,
+                        voteAverage = dto.vote_average
+                    )
+                }
+                Result.success(movies)
+            } else {
+                Result.failure(MovieError.ApiError(response.code()))
             }
-            Log.e("MovieRepository", "Error fetching movies", e)
-            Result.failure(error)
+        } catch (e: Exception) {
+            Result.failure(MovieError.UnknownError(e))
         }
     }
 }
+
+private data class MoviesResponse(val movies: List<Movie>)

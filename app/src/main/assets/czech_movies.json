@@ -1,0 +1,20 @@
+{
+  "movies": [
+    {
+      "id": 1,
+      "title": "Pelíšky",
+      "posterPath": "https://image.pmgstatic.com/cache/resized/w420/files/images/film/posters/158/988/158988468_017889.jpg",
+      "releaseDate": "1999",
+      "overview": "Příběh se odehrává na konci 60. let v jedné pražské čtvrti. Hlavními hrdiny jsou rodiny Šebkových a Krausových...",
+      "voteAverage": 9.1
+    },
+    {
+      "id": 2,
+      "title": "Obecná škola",
+      "posterPath": "https://image.pmgstatic.com/cache/resized/w420/files/images/film/posters/164/534/164534561_67d0ca.jpg",
+      "releaseDate": "1991",
+      "overview": "Děj filmu se odehrává v první poválečné zimě. Desetiletý Eda a jeho spolužáci z obecné školy jsou pověstní svou neukázněností...",
+      "voteAverage": 8.8
+    }
+  ]
+}
