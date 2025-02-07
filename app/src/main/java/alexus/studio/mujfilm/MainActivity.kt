@@ -19,7 +19,14 @@ import alexus.studio.mujfilm.viewmodel.MovieViewModel
 import alexus.studio.mujfilm.ui.components.ErrorScreen
 import alexus.studio.mujfilm.ui.movies.MoviesGrid
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import alexus.studio.mujfilm.viewmodel.MoviesUiState
+import alexus.studio.mujfilm.ui.state.MoviesUiState  // Změněn import z viewmodel na ui.state
+import kotlinx.coroutines.launch
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import alexus.studio.mujfilm.ui.recommendations.RecommendationsScreen
+import androidx.compose.material.icons.filled.Star // Přidáme import pro ikonu doporučení
+import alexus.studio.mujfilm.ui.recommendations.RecommendationsSection // Přidán import
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,12 +76,18 @@ fun MainScreen(viewModel: MovieViewModel) {
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Filled.Search, contentDescription = "Hledat") },
-                    label = { Text("Hledat") }
+                    icon = { Icon(Icons.Filled.Star, contentDescription = stringResource(R.string.recommendations)) },
+                    label = { Text(stringResource(R.string.recommendations)) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
+                    icon = { Icon(Icons.Filled.Search, contentDescription = "Hledat") },
+                    label = { Text("Hledat") }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 3,
+                    onClick = { selectedTab = 3 },
                     icon = { Icon(Icons.Filled.Favorite, contentDescription = "Oblíbené") },
                     label = { Text("Oblíbené") }
                 )
@@ -88,52 +101,133 @@ fun MainScreen(viewModel: MovieViewModel) {
         ) {
             when (selectedTab) {
                 0 -> HomeScreen(viewModel)
-                1 -> SearchScreen(viewModel)
-                2 -> FavoritesScreen(viewModel)
+                1 -> RecommendationsScreen(viewModel)
+                2 -> SearchScreen(viewModel)
+                3 -> FavoritesScreen(viewModel)
                 else -> HomeScreen(viewModel) // Default case
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(viewModel: MovieViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val recommendations by viewModel.recommendations.collectAsStateWithLifecycle()
+    val favoriteMovies by viewModel.favoriteMovies.collectAsStateWithLifecycle()
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Text(
-            text = stringResource(R.string.popular_movies),
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(16.dp)
-        )
+    val addedToFavoritesMessage = stringResource(R.string.added_to_favorites)
+    val removedFromFavoritesMessage = stringResource(R.string.removed_from_favorites)
+    val recommendedForYouTitle = stringResource(R.string.recommended_for_you)
 
-        when (val state = uiState) {
-            MoviesUiState.Loading -> {
-                CircularProgressIndicator(
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                val wasAdded = remember(data.visuals.message) {
+                    data.visuals.message.contains("přidán")
+                }
+                Snackbar(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .wrapContentSize()
-                )
+                        .padding(16.dp)
+                        .animateContentSize(),
+                    containerColor = if (wasAdded) 
+                        MaterialTheme.colorScheme.primaryContainer 
+                    else MaterialTheme.colorScheme.errorContainer,
+                    contentColor = if (wasAdded)
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    else MaterialTheme.colorScheme.onErrorContainer,
+                    action = {
+                        TextButton(onClick = { data.dismiss() }) {
+                            Text(
+                                text = if (wasAdded) "Zobrazit" else "Zpět",
+                                color = if (wasAdded)
+                                    MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                ) {
+                    Text(data.visuals.message)
+                }
             }
-            MoviesUiState.Empty -> {
-                Text(
-                    text = "Nebyly nalezeny žádné filmy",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .wrapContentSize()
-                )
-            }
-            is MoviesUiState.Error -> {
-                ErrorScreen(
-                    message = state.message,
-                    onRetry = { viewModel.loadMovies() }
-                )
-            }
-            is MoviesUiState.Success -> {
-                MoviesGrid(
-                    movies = state.movies,
-                    onMovieClick = { movie -> viewModel.toggleFavorite(movie) }
-                )
+        }
+    ) { padding ->
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+        ) {
+            // Sekce doporučených filmů
+            RecommendationsSection(
+                title = recommendedForYouTitle,
+                movies = recommendations,
+                onMovieClick = { movie -> 
+                    val wasAdded = !favoriteMovies.any { it.id == movie.id }
+                    viewModel.toggleFavorite(movie)
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = if (wasAdded) {
+                                String.format(addedToFavoritesMessage, movie.title)
+                            } else {
+                                String.format(removedFromFavoritesMessage, movie.title)
+                            }
+                        )
+                    }
+                }
+            )
+
+            // Populární filmy
+            Text(
+                text = stringResource(R.string.popular_movies),
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(16.dp)
+            )
+
+            when (val state = uiState) {
+                MoviesUiState.Loading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .wrapContentSize()
+                    )
+                }
+                MoviesUiState.Empty -> {
+                    Text(
+                        text = "Nebyly nalezeny žádné filmy",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .wrapContentSize()
+                    )
+                }
+                is MoviesUiState.Error -> {
+                    ErrorScreen(
+                        message = state.message,
+                        onRetry = { viewModel.loadMovies() }
+                    )
+                }
+                is MoviesUiState.Success -> {
+                    MoviesGrid(
+                        movies = state.movies,
+                        onMovieClick = { movie -> 
+                            val wasAdded = !viewModel.favoriteMovies.value.any { it.id == movie.id }
+                            viewModel.toggleFavorite(movie)
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = if (wasAdded) {
+                                        "✨ ${movie.title} přidán do oblíbených"
+                                    } else {
+                                        "💔 ${movie.title} odebrán z oblíbených"
+                                    },
+                                    duration = SnackbarDuration.Short,
+                                    withDismissAction = true
+                                )
+                            }
+                        },
+                        favoriteMovies = viewModel.favoriteMovies.collectAsStateWithLifecycle().value
+                    )
+                }
             }
         }
     }
@@ -169,14 +263,14 @@ fun SearchScreen(viewModel: MovieViewModel) {
             )
         } else {
             when (val state = uiState) {
-                MoviesUiState.Loading -> {
+                is MoviesUiState.Loading -> {
                     CircularProgressIndicator(
                         modifier = Modifier
                             .fillMaxSize()
                             .wrapContentSize()
                     )
                 }
-                MoviesUiState.Empty -> {
+                is MoviesUiState.Empty -> {
                     Text(
                         text = "Nebyly nalezeny žádné filmy",
                         modifier = Modifier
@@ -185,24 +279,18 @@ fun SearchScreen(viewModel: MovieViewModel) {
                     )
                 }
                 is MoviesUiState.Error -> {
+                    val errorMessage = state.message  // Lokální proměnná pro smart cast
                     ErrorScreen(
-                        message = state.message,
+                        message = errorMessage,
                         onRetry = { viewModel.searchMovies(searchQuery) }
                     )
                 }
                 is MoviesUiState.Success -> {
+                    val movies = state.movies  // Lokální proměnná pro smart cast
                     MoviesGrid(
-                        movies = state.movies,
-                        onMovieClick = { movie -> viewModel.toggleFavorite(movie) },
+                        movies = movies,
+                        onMovieClick = { viewModel.toggleFavorite(it) },
                         modifier = Modifier.fillMaxSize()
-                    )
-                }
-                else -> {
-                    Text(
-                        text = "Neznámý stav",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .wrapContentSize()
                     )
                 }
             }
@@ -210,25 +298,38 @@ fun SearchScreen(viewModel: MovieViewModel) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(viewModel: MovieViewModel) {
     val favoriteMovies by viewModel.favoriteMovies.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
-
-    if (isLoading) {
-        CircularProgressIndicator(
-            modifier = Modifier
-                .fillMaxSize()
-                .wrapContentSize()
-        )
-    } else if (favoriteMovies.isEmpty()) {
-        Text(
-            text = "Zatím nemáte žádné oblíbené filmy",
-            modifier = Modifier
-                .fillMaxSize()
-                .wrapContentSize()
-        )
-    } else {
-        MoviesGrid(            movies = favoriteMovies,            onMovieClick = { movie -> viewModel.toggleFavorite(movie) },            modifier = Modifier.fillMaxSize()
-        )
-    }}
+    val selectedMovies by viewModel.selectedMovies.collectAsStateWithLifecycle()
+    
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (selectedMovies.isNotEmpty()) {
+            TopAppBar(
+                title = { Text("Vybráno: ${selectedMovies.size}") },
+                actions = {
+                    IconButton(onClick = { viewModel.deleteSelectedMovies() }) {
+                        Icon(Icons.Default.Delete, "Smazat vybrané")
+                    }
+                }
+            )
+        }
+        
+        if (favoriteMovies.isEmpty()) {
+            Text(
+                text = "Zatím nemáte žádné oblíbené filmy",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .wrapContentSize()
+            )
+        } else {
+            MoviesGrid(
+                movies = favoriteMovies,
+                onMovieClick = { viewModel.toggleMovieSelection(it) },
+                modifier = Modifier.fillMaxSize(),
+                favoriteMovies = favoriteMovies
+            )
+        }
+    }
+}

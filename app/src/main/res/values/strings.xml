@@ -1,18 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Můj Film</string>
-    <string name="search_hint">Zadejte název filmu...</string>
     <string name="home">Domů</string>
     <string name="search">Hledat</string>
     <string name="favorites">Oblíbené</string>
+    <string name="recommendations">Doporučené</string>
+    <string name="search_hint">Hledat film...</string>
     <string name="popular_movies">Populární filmy</string>
-    <string name="no_results">Žádné výsledky</string>
-    <string name="error_loading_movies">Nepodařilo se načíst filmy</string>
-    <string name="error_no_internet">Zkontrolujte připojení k internetu</string>
-    <string name="error_try_again">Zkusit znovu</string>
-    <string name="error_tip">Zkontrolujte připojení k internetu a zkuste to znovu</string>
+    <string name="recommended_for_you">Doporučené pro vás</string>
     <string name="no_movies_found">Nebyly nalezeny žádné filmy</string>
+    <string name="error_no_internet">Není k dispozici připojení k internetu</string>
+    <string name="error_server">Nepodařilo se připojit k serveru</string>
+    <string name="error_unknown">Došlo k neočekávané chybě</string>
+    <string name="retry">Zkusit znovu</string>
+    <string name="added_to_favorites">✨ %1$s přidán do oblíbených</string>
+    <string name="removed_from_favorites">💔 %1$s odebrán z oblíbených</string>
+    <string name="selected_count">Vybráno: %1$d</string>
     <string name="no_favorites">Zatím nemáte žádné oblíbené filmy</string>
-    <string name="try_again">Zkusit znovu</string>
-    <string name="tmdb_attribution">Powered by The Movie Database (TMDB)</string>
+    <string name="delete_selected">Smazat vybrané</string>
+    <string name="show">Zobrazit</string>
+    <string name="back">Zpět</string>
 </resources>

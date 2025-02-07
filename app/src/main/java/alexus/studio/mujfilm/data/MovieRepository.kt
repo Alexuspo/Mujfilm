@@ -2,6 +2,7 @@ package alexus.studio.mujfilm.data
 
 import android.content.Context
 import alexus.studio.mujfilm.data.model.Movie
+import alexus.studio.mujfilm.data.model.MovieDto
 import alexus.studio.mujfilm.data.remote.TmdbApiService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -37,20 +38,24 @@ class MovieRepository(private val context: Context) {
             .create(TmdbApiService::class.java)
     }
 
+    private fun mapDtoToMovie(dto: MovieDto): Movie {
+        return Movie(
+            id = dto.id,
+            title = dto.title,
+            posterPath = dto.poster_path?.let { "${TmdbApiService.IMAGE_BASE_URL}$it" },
+            releaseDate = dto.release_date,
+            overview = dto.overview,
+            voteAverage = dto.vote_average,
+            genreIds = dto.genre_ids,
+            isSelected = false
+        )
+    }
+
     suspend fun getPopularMovies(): Result<List<Movie>> = withContext(Dispatchers.IO) {
         try {
             val response = api.getMovies(apiKey = "4de5de226aa2c5402798e3d9f369016b")
             if (response.isSuccessful && response.body() != null) {
-                val movies = response.body()!!.results.map { dto ->
-                    Movie(
-                        id = dto.id,
-                        title = dto.title,
-                        posterPath = dto.poster_path?.let { "${TmdbApiService.IMAGE_BASE_URL}$it" },
-                        releaseDate = dto.release_date,
-                        overview = dto.overview,
-                        voteAverage = dto.vote_average
-                    )
-                }
+                val movies = response.body()!!.results.map { mapDtoToMovie(it) }
                 Result.success(movies)
             } else {
                 Result.failure(MovieError.ApiError(response.code()))
@@ -67,16 +72,7 @@ class MovieRepository(private val context: Context) {
                 query = query
             )
             if (response.isSuccessful && response.body() != null) {
-                val movies = response.body()!!.results.map { dto ->
-                    Movie(
-                        id = dto.id,
-                        title = dto.title,
-                        posterPath = dto.poster_path?.let { "${TmdbApiService.IMAGE_BASE_URL}$it" },
-                        releaseDate = dto.release_date,
-                        overview = dto.overview,
-                        voteAverage = dto.vote_average
-                    )
-                }
+                val movies = response.body()!!.results.map { mapDtoToMovie(it) }
                 Result.success(movies)
             } else {
                 Result.failure(MovieError.ApiError(response.code()))

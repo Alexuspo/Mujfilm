@@ -1,26 +1,29 @@
 package alexus.studio.mujfilm.viewmodel
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import alexus.studio.mujfilm.data.MovieRepository
-import alexus.studio.mujfilm.data.model.Movie
+import alexus.studio.mujfilm.data.remote.MovieApiService
+import alexus.studio.mujfilm.model.Movie
+import alexus.studio.mujfilm.ui.state.MoviesUiState
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import alexus.studio.mujfilm.data.MovieError
 
-class MovieViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = MovieRepository(application)
+class MovieViewModel(
+    private val apiService: MovieApiService
+) : ViewModel() {
     
     private val _uiState = MutableStateFlow<MoviesUiState>(MoviesUiState.Loading)
-    val uiState = _uiState.asStateFlow()
-
-    private val _favoriteMovies = MutableStateFlow<List<Movie>>(emptyList())
-    val favoriteMovies = _favoriteMovies.asStateFlow()
+    val uiState: StateFlow<MoviesUiState> = _uiState
 
     private val _isLoading = MutableStateFlow(false)
-    val isLoading = _isLoading.asStateFlow()
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _favoriteMovies = MutableStateFlow<List<Movie>>(emptyList())
+    val favoriteMovies: StateFlow<List<Movie>> = _favoriteMovies
+
+    private val _selectedMovies = MutableStateFlow<Set<Movie>>(emptySet())
+    val selectedMovies: StateFlow<Set<Movie>> = _selectedMovies
 
     init {
         loadMovies()
@@ -28,29 +31,16 @@ class MovieViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadMovies() {
         viewModelScope.launch {
-            _isLoading.value = true
+            _uiState.value = MoviesUiState.Loading
             try {
-                repository.getPopularMovies().fold(
-                    onSuccess = { movies ->
-                        _uiState.value = if (movies.isEmpty()) {
-                            MoviesUiState.Empty
-                        } else {
-                            MoviesUiState.Success(movies)
-                        }
-                    },
-                    onFailure = { error ->
-                        val message = when (error) {
-                            is MovieError.NoInternet -> "Není k dispozici připojení k internetu"
-                            is MovieError.ApiNotReachable -> "Server není dostupný"
-                            is MovieError.Timeout -> "Vypršel časový limit připojení"
-                            is MovieError.ApiError -> "Chyba serveru: ${error.code}"
-                            else -> "Neočekávaná chyba: ${error.message}"
-                        }
-                        _uiState.value = MoviesUiState.Error(message)
-                    }
-                )
-            } finally {
-                _isLoading.value = false
+                val movies = apiService.getPopularMoviess()
+                _uiState.value = if (movies.isEmpty()) {
+                    MoviesUiState.Empty
+                } else {
+                    MoviesUiState.Success(movies)
+                }
+            } catch (e: Exception) {
+                _uiState.value = MoviesUiState.Error(e.message ?: "Unknown error")
             }
         }
     }
@@ -59,25 +49,14 @@ class MovieViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                repository.searchMovies(query).fold(
-                    onSuccess = { movies ->
-                        _uiState.value = if (movies.isEmpty()) {
-                            MoviesUiState.Empty
-                        } else {
-                            MoviesUiState.Success(movies)
-                        }
-                    },
-                    onFailure = { error ->
-                        val message = when (error) {
-                            is MovieError.NoInternet -> "Není k dispozici připojení k internetu"
-                            is MovieError.ApiNotReachable -> "Server není dostupný"
-                            is MovieError.Timeout -> "Vypršel časový limit připojení"
-                            is MovieError.ApiError -> "Chyba serveru: ${error.code}"
-                            else -> "Neočekávaná chyba: ${error.message}"
-                        }
-                        _uiState.value = MoviesUiState.Error(message)
-                    }
-                )
+                val movies = apiService.searchMovies(query)
+                _uiState.value = if (movies.isEmpty()) {
+                    MoviesUiState.Empty
+                } else {
+                    MoviesUiState.Success(movies)
+                }
+            } catch (e: Exception) {
+                _uiState.value = MoviesUiState.Error(e.message ?: "Unknown error")
             } finally {
                 _isLoading.value = false
             }
@@ -92,5 +71,22 @@ class MovieViewModel(application: Application) : AndroidViewModel(application) {
             currentFavorites.add(movie)
         }
         _favoriteMovies.value = currentFavorites
+    }
+
+    fun toggleMovieSelection(movie: Movie) {
+        val currentSelection = _selectedMovies.value.toMutableSet()
+        if (currentSelection.contains(movie)) {
+            currentSelection.remove(movie)
+        } else {
+            currentSelection.add(movie)
+        }
+        _selectedMovies.value = currentSelection
+    }
+
+    fun deleteSelectedMovies() {
+        val currentFavorites = _favoriteMovies.value.toMutableList()
+        currentFavorites.removeAll(_selectedMovies.value)
+        _favoriteMovies.value = currentFavorites
+        _selectedMovies.value = emptySet()
     }
 }

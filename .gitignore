@@ -1,34 +1,52 @@
-# Gradle files
-.gradle/
-build/
-
-# Local configuration file (sdk path, etc)
-local.properties
-
-# Android Studio generated files and folders
 *.iml
-.idea/
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+/.idea/compiler.xml
+/.idea/gradle.xml
+/.idea/misc.xml
 .DS_Store
-captures/
-.externalNativeBuild/
-.cxx/
-
-# Built application files
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+/app/release
+/app/debug
 *.apk
-*.ap_
 *.aab
+*.ap_
+*.jks
+*.keystore
+/app/build
+.idea/
 
-# Generated files
-bin/
-gen/
-out/
+# API keys and secrets
+apikey.properties
 
 # Log Files
 *.log
 
-# Release directories
-app/debug/
-app/release/
+# Android Studio Navigation editor temp files
+.navigation/
 
-# Room schema
-app/schemas/
+# Android Studio captures folder
+captures/
+
+# IntelliJ
+.idea/tasks.xml
+.idea/dictionaries
+.idea/vcs.xml
+
+# Keystore files
+# Uncomment the following lines if you do not want to check your keystore files in.
+#*.jks
+#*.keystore
+
+# External native build folder generated in Android Studio 2.2 and later
+.cxx/
