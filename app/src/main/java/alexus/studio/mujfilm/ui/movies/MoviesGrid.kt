@@ -16,6 +16,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.foundation.BorderStroke
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -62,7 +63,8 @@ private fun SelectableMovieCard(
             containerColor = if (isSelected && isSelectable) 
                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
             else MaterialTheme.colorScheme.surface
-        )
+        ),
+        border = if (isFavorite) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
     ) {
         Box {
             Row(modifier = Modifier.height(160.dp)) {

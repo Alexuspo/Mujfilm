@@ -20,69 +20,67 @@ fun FavoritesScreen(viewModel: MovieViewModel) {
     val favoriteMovies by viewModel.favoriteMovies.collectAsStateWithLifecycle()
     val selectedMovies by viewModel.selectedMovies.collectAsStateWithLifecycle()
     var isSelectionMode by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-
-    Scaffold(
-        topBar = {
+    
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (favoriteMovies.isNotEmpty()) {
             TopAppBar(
-                title = { Text(if (isSelectionMode) "Vybráno: ${selectedMovies.size}" else "Oblíbené filmy") },
+                title = { 
+                    Text(if (isSelectionMode) "Vybráno: ${selectedMovies.size}" else "Oblíbené filmy")
+                },
                 actions = {
-                    if (favoriteMovies.isNotEmpty()) {
-                        if (isSelectionMode) {
-                            IconButton(onClick = { viewModel.selectAllMovies(favoriteMovies) }) {
-                                Icon(Icons.Default.Done, "Vybrat vše")
-                            }
-                            IconButton(onClick = {
+                    if (isSelectionMode) {
+                        // Tlačítka pro režim výběru
+                        IconButton(onClick = { viewModel.selectAllMovies(favoriteMovies) }) {
+                            Icon(Icons.Default.Done, "Vybrat vše")
+                        }
+                        IconButton(
+                            onClick = { 
                                 viewModel.deleteSelectedMovies()
                                 isSelectionMode = false
-                            }) {
-                                Icon(Icons.Default.Delete, "Smazat vybrané")
                             }
-                            IconButton(onClick = {
+                        ) {
+                            Icon(Icons.Default.Delete, "Smazat vybrané")
+                        }
+                        IconButton(
+                            onClick = { 
                                 viewModel.clearSelection()
                                 isSelectionMode = false
-                            }) {
-                                Icon(Icons.Default.Close, "Zrušit výběr")
                             }
-                        } else {
-                            IconButton(onClick = { isSelectionMode = true }) {
-                                Icon(Icons.Default.Edit, "Upravit")
-                            }
+                        ) {
+                            Icon(Icons.Default.Close, "Zrušit výběr")
+                        }
+                    } else {
+                        // Tlačítko pro zapnutí režimu výběru
+                        IconButton(onClick = { isSelectionMode = true }) {
+                            Icon(Icons.Default.Edit, "Upravit")
                         }
                     }
                 }
             )
-        },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-    ) { padding -> 
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-        ) {
-            if (favoriteMovies.isEmpty()) {
-                Text(
-                    text = "Zatím nemáte žádné oblíbené filmy",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .wrapContentSize()
-                )
-            } else {
-                MoviesGrid(
-                    movies = favoriteMovies,
-                    onMovieClick = { movie ->
-                        if (isSelectionMode) {
-                            viewModel.toggleMovieSelection(movie)
-                        } else {
-                            viewModel.toggleFavorite(movie)
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                    favoriteMovies = favoriteMovies,
-                    selectedMovies = if (isSelectionMode) selectedMovies else emptySet(),
-                    isSelectable = isSelectionMode
-                )
-            }
+        }
+        
+        if (favoriteMovies.isEmpty()) {
+            Text(
+                text = "Zatím nemáte žádné oblíbené filmy",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .wrapContentSize()
+            )
+        } else {
+            MoviesGrid(
+                movies = favoriteMovies,
+                onMovieClick = { movie ->
+                    if (isSelectionMode) {
+                        viewModel.toggleMovieSelection(movie)
+                    } else {
+                        viewModel.toggleFavorite(movie)
+                    }
+                },
+                modifier = Modifier.fillMaxSize(),
+                favoriteMovies = favoriteMovies,
+                selectedMovies = if (isSelectionMode) selectedMovies else emptySet(),
+                isSelectable = isSelectionMode
+            )
         }
     }
 }

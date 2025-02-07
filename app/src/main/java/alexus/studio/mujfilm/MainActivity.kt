@@ -3,37 +3,41 @@ package alexus.studio.mujfilm
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
+
 import alexus.studio.mujfilm.ui.theme.MujFilmTheme
 import alexus.studio.mujfilm.viewmodel.MovieViewModel
+import alexus.studio.mujfilm.viewmodel.MovieViewModelFactory
 import alexus.studio.mujfilm.ui.components.ErrorScreen
 import alexus.studio.mujfilm.ui.movies.MoviesGrid
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import alexus.studio.mujfilm.ui.state.MoviesUiState  // Změněn import z viewmodel na ui.state
-import kotlinx.coroutines.launch
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import alexus.studio.mujfilm.ui.state.MoviesUiState
 import alexus.studio.mujfilm.ui.recommendations.RecommendationsScreen
-import androidx.compose.material.icons.filled.Star // Přidáme import pro ikonu doporučení
-import alexus.studio.mujfilm.ui.recommendations.RecommendationsSection // Přidán import
+import alexus.studio.mujfilm.ui.recommendations.RecommendationsSection
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val repository = (application as MujFilmApplication).repository
+        val viewModel = ViewModelProvider(
+            this,
+            MovieViewModelFactory(repository)
+        )[MovieViewModel::class.java]
+        
         setContent {
-            val viewModel: MovieViewModel = viewModel()
-            App(viewModel)
+            MujFilmTheme {
+                App(viewModel)
+            }
         }
     }
 }
